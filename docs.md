@@ -558,12 +558,203 @@ Asisten Virtual HR - Tanya apa saja tentang kebijakan HR, cuti, benefit, dan lai
 
 
 
-RUN API 
+---
+
+# Dokumentasi API (HRIS Chatbot)
+
+API REST untuk mengonsumsi HRIS Chatbot dari Flutter, Postman, atau client lain.
+
+---
+
+## Menjalankan API
+
+```bash
+# Dari folder project
 uvicorn api:app --host 127.0.0.1 --port 8000 --reload
+```
 
+- **Base URL:** `http://127.0.0.1:8000`
+- **Swagger UI:** http://127.0.0.1:8000/docs
+- **ReDoc:** http://127.0.0.1:8000/redoc
 
-RUN WEB 
+Pastikan file `.env` berisi `GROQ_API_KEY`.
 
+---
+
+## Endpoints
+
+### 1. Root – Info API
+
+| Method | URL   | Deskripsi   |
+|--------|-------|-------------|
+| **GET** | `/`   | Info layanan & versi |
+
+**Response (200):**
+```json
+{
+  "service": "HRIS Chatbot API",
+  "version": "2.0.0",
+  "docs": "/docs",
+  "health": "/health",
+  "chat": "POST /chat"
+}
+```
+
+---
+
+### 2. Health Check
+
+| Method | URL      | Deskripsi        |
+|--------|----------|------------------|
+| **GET** | `/health` | Cek status server |
+
+**Response (200):**
+```json
+{
+  "status": "ok",
+  "service": "hris-chatbot-api"
+}
+```
+
+---
+
+### 3. Chat – Kirim Pertanyaan ke HR Assistant
+
+| Method | URL    | Deskripsi                          |
+|--------|--------|------------------------------------|
+| **POST** | `/chat` | Kirim pertanyaan + konteks user (RAG) |
+
+**Request Headers:**
+- `Content-Type: application/json`
+- `Accept: application/json`
+
+**Request Body:**
+
+| Field       | Type   | Wajib | Deskripsi                                      |
+|------------|--------|-------|-------------------------------------------------|
+| `message`  | string | ✅    | Pertanyaan user (min 1 karakter)                |
+| `user_data`| object | ✅    | Data user dari Flutter (Hive) untuk konteks AI  |
+
+**Contoh Body (Postman / raw JSON):**
+
+```json
+{
+  "message": "Berapa kali saya terlambat bulan ini?",
+  "user_data": {
+    "nama": "John Doe",
+    "nik": "123456",
+    "jabatan": "Software Engineer",
+    "departemen": "IT",
+    "bagian": "Development",
+    "sisa_cuti": "12",
+    "periode_mulai_cuti": "2024-01-01",
+    "periode_akhir_cuti": "2024-12-31",
+    "attendance": {
+      "bulan": "02",
+      "tahun": "2026",
+      "jumlah_hadir": "20",
+      "terlambat": "2"
+    }
+  }
+}
+```
+
+**Contoh minimal (jika Flutter belum kirim user_data lengkap):**
+
+```json
+{
+  "message": "Cara ajukan cuti?",
+  "user_data": {}
+}
+```
+
+**Response (200):**
+
+| Field     | Type   | Deskripsi                    |
+|-----------|--------|------------------------------|
+| `success` | bool   | `true` jika sukses           |
+| `message` | string | Jawaban dari HR assistant    |
+| `query`   | string | Pertanyaan yang dikirim      |
+
+**Contoh Response:**
+```json
+{
+  "success": true,
+  "message": "Berdasarkan data absensi Anda di periode 02/2026, Anda terlambat 2 kali.",
+  "query": "Berapa kali saya terlambat bulan ini?"
+}
+```
+
+---
+
+## Kode Error
+
+| Kode | Arti                | Penyebab umum                          |
+|------|---------------------|----------------------------------------|
+| **422** | Validation Error   | `message` kosong, atau `user_data` tidak ada |
+| **500** | Server Error       | `GROQ_API_KEY` belum di-set atau error internal |
+
+**Contoh response error (422):**
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "message"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+```
+
+**Contoh response error (500):**
+```json
+{
+  "detail": "Error memproses chat: ..."
+}
+```
+
+---
+
+## Test di Postman
+
+1. **Method:** `POST`
+2. **URL:** `http://127.0.0.1:8000/chat`
+3. **Headers:**  
+   - `Content-Type` = `application/json`
+4. **Body** → pilih **raw** → **JSON**, isi:
+   ```json
+   {
+     "message": "Jam kerja berapa?",
+     "user_data": {}
+   }
+   ```
+5. Klik **Send**. Jawaban ada di field `message` di response.
+
+---
+
+## Ringkasan
+
+| Item          | Nilai                                                    |
+|---------------|----------------------------------------------------------|
+| Base URL      | `http://127.0.0.1:8000`                                  |
+| Chat endpoint | `POST /chat`                                             |
+| Body          | `{ "message": "...", "user_data": { ... } }`            |
+| Response      | `{ "success", "message", "query" }`                       |
+
+---
+
+# Menjalankan Aplikasi
+
+## RUN API
+
+```bash
+uvicorn api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+## RUN WEB (Streamlit)
+
+```bash
 # 1. Hapus cache lama (optional)
 pip uninstall sentence-transformers -y
 
@@ -572,3 +763,4 @@ pip install streamlit groq chromadb python-dotenv
 
 # 3. Run
 streamlit run app.py
+```
