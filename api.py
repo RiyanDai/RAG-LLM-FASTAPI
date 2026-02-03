@@ -14,7 +14,7 @@ from rag_system import HRISRagSystem
 app = FastAPI(
     title="HRIS Chatbot API",
     description="API untuk konsumsi HRIS Chatbot dari Flutter",
-    version="2.0.0",
+    version="0.0.0",
 )
 
 # CORS
@@ -75,7 +75,7 @@ async def root():
     """Info API"""
     return {
         "service": "HRIS Chatbot API",
-        "version": "2.0.0",
+        "version": "0.0.0",
         "docs": "/docs",
         "health": "/health",
         "chat": "POST /chat",
